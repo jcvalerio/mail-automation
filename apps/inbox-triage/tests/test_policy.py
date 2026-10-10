@@ -60,3 +60,52 @@ def test_needs_action_overrides_trash_category() -> None:
 
     assert decision.action is Action.KEEP
     assert decision.priority is Priority.HIGH
+
+
+def test_automated_sender_cannot_be_personal() -> None:
+    policy = example_config().policy
+    message = make_message(sender="LinkedIn <messages-noreply@linkedin.example>")
+
+    decision = policy.decide_by_model(
+        message,
+        Classification(
+            "personal",
+            0.91,
+            0.2,
+            probabilities={"personal": 0.91, "newsletter": 0.06, "promotion": 0.03},
+        ),
+    )
+
+    assert decision.category == "newsletter"
+    assert decision.confidence == 0.06
+    assert decision.source is DecisionSource.UNCERTAIN
+    assert decision.action is Action.KEEP
+
+
+def test_unsubscribe_header_marks_sender_as_automated() -> None:
+    policy = example_config().policy
+    message = make_message(
+        sender="Ana <ana@shop.example>", list_unsubscribe="<mailto:u@shop.example>"
+    )
+
+    decision = policy.decide_by_model(
+        message,
+        Classification(
+            "personal", 0.9, 0.1, probabilities={"personal": 0.04, "promotion": 0.95}
+        ),
+    )
+
+    assert decision.category == "promotion"
+    assert decision.action is Action.TRASH
+
+
+def test_human_sender_can_be_personal() -> None:
+    policy = example_config().policy
+
+    decision = policy.decide_by_model(
+        make_message(sender="Ana <ana@mail.example>"),
+        Classification("personal", 0.9, 0.2, probabilities={"personal": 0.9}),
+    )
+
+    assert decision.category == "personal"
+    assert decision.priority is Priority.HIGH

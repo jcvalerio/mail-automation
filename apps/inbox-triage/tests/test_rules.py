@@ -96,3 +96,19 @@ def test_first_matching_rule_wins() -> None:
 def test_invalid_rules_are_rejected(data) -> None:
     with pytest.raises(RuleConfigError):
         Rule.from_dict(data)
+
+
+def test_example_rules_cover_spanish_security_and_risky_notices() -> None:
+    from tests.helpers import example_config
+
+    policy = example_config().policy
+    cases = {
+        "Notificación de Inicio de Sesión en la Aplicación FLEX": "security_alert",
+        "Tu sesión se inició con éxito": "security_alert",
+        "Un nuevo dispositivo está usando tu cuenta": "security_alert",
+        "Creación de retiro sin tarjeta": "risky_transaction",
+        "Liberty Factura electrónica N° 123": "receipt",
+    }
+    for subject, category in cases.items():
+        decision = policy.decide_by_guard_or_rule(make_message(subject=subject))
+        assert decision is not None and decision.category == category, subject

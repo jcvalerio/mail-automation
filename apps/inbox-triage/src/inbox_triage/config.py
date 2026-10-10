@@ -114,5 +114,7 @@ def _parse_categories(data: dict[str, Any]) -> dict[str, CategoryPolicy]:
             description=description,
             action=Action(value.get("action", Action.KEEP)),
             priority=Priority(value.get("priority", Priority.NORMAL)),
+            human_only=bool(value.get("human_only", False)),
+            awareness=bool(value.get("awareness", False)),
         )
     return categories

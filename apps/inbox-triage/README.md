@@ -15,6 +15,9 @@ classifier running on `localhost`.
    - Probability of "needs action" ≥ `needs_action_threshold`: keep, high priority.
    - Category probability < `min_confidence`: keep, listed for review.
    - Otherwise: the category's configured action.
+   - Categories marked `human_only` (e.g. `personal`) can't be assigned to
+     automated senders (noreply/alerts addresses or an unsubscribe header);
+     the next-best category is used with its raw probability.
 4. **Fail closed:** if the classifier is down or returns something invalid, the
    remaining messages stay in the inbox.
 
@@ -28,8 +31,11 @@ Archived messages get the `Triage/Processed` label. Trash is Gmail's Trash
 | `digests/YYYY-MM-DD[-dry-run].md` | Summary, needs-attention list, counts by category and sender domain | Yes |
 | `data/triage.sqlite` | Full decision log (subjects, senders, scores) | **No** (denied in `.claude/settings.json`) |
 
-Digest text from emails is sanitized and truncated. Archived and trashed mail
-appears only as counts and sender domains.
+Digest text from emails is sanitized and truncated, and runs of 6 or more digits
+(account, card, invoice numbers) are masked to their last 4. Archived and trashed
+mail appears only as counts and sender domains, except categories marked
+`awareness: true` (e.g. security notices, cardless withdrawals), which are
+listed per platform with their distinct subjects.
 
 ## Setup
 

@@ -134,6 +134,11 @@ class SystemOneClassifier:
             needs_action_probability=None
             if needs_action_probability is None
             else float(needs_action_probability),
+            probabilities={
+                name: float(value)
+                for name, value in probabilities.items()
+                if name in self._categories
+            },
         )
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email.utils import parseaddr
 from enum import StrEnum
@@ -14,6 +15,12 @@ GMAIL_CATEGORY_LABELS = {
     "CATEGORY_FORUMS": "forums",
     "CATEGORY_SOCIAL": "social",
 }
+
+
+# Sender mailbox names that are never a person writing to you.
+_AUTOMATED_LOCAL_PART_RE = re.compile(
+    r"no-?reply|do-?not-?reply|noresponse|notifica|alerta|alerts?\b|mailer-daemon"
+)
 
 
 class Action(StrEnum):
@@ -87,12 +94,20 @@ class InboxMessage:
     def is_starred(self) -> bool:
         return "STARRED" in self.label_ids
 
+    @property
+    def is_automated_sender(self) -> bool:
+        local_part = self.sender_email.partition("@")[0]
+        return self.has_list_unsubscribe or bool(
+            _AUTOMATED_LOCAL_PART_RE.search(local_part)
+        )
+
 
 @dataclass(frozen=True)
 class Classification:
     category: str
     category_confidence: float
     needs_action_probability: float | None = None
+    probabilities: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

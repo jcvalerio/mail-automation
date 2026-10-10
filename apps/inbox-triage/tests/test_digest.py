@@ -31,10 +31,9 @@ def test_sanitize_truncates() -> None:
     assert sanitize("x" * 300, 10) == "x" * 9 + "…"
 
 
-def test_github_security_is_listed_first_under_attention() -> None:
+def test_github_is_low_priority_and_archived() -> None:
     report = _report(
         [
-            make_metadata("p", sender="friend@mail.example", subject="Dinner?"),
             make_metadata(
                 "g",
                 sender="GitHub <notifications@github.com>",
@@ -45,10 +44,69 @@ def test_github_security_is_listed_first_under_attention() -> None:
     )
 
     digest = render_digest(report)
-    attention = digest.split("## Needs your attention", 1)[1].split("##", 1)[0]
 
-    assert attention.index("github_security") < attention.index("personal")
+    assert "## Would be archived: 1" in digest
+    assert "github_security: 1 — github.com (1)" in digest
     assert "DRY RUN" in digest
+
+
+def test_awareness_section_groups_by_platform_with_masked_numbers() -> None:
+    report = _report(
+        [
+            make_metadata(
+                "r1",
+                sender="alerta@bank.example",
+                subject="Creación de retiro sin tarjeta",
+            ),
+            make_metadata(
+                "r2",
+                sender="alerta@bank.example",
+                subject="Retiro sin tarjeta retirado",
+            ),
+            make_metadata(
+                "s1",
+                sender="no-reply@stream.example",
+                subject="Un nuevo dispositivo está usando tu cuenta",
+            ),
+            make_metadata(
+                "s2",
+                sender="login@wallet.example",
+                subject="Tu sesión se inició con éxito",
+            ),
+            make_metadata(
+                "s3",
+                sender="login@wallet.example",
+                subject="Tu sesión se inició con éxito",
+            ),
+            make_metadata(
+                "i1",
+                sender="billing@cloud.example",
+                subject="Invoice for account 901365392888",
+            ),
+        ],
+        Classification("receipt", 0.95, 0.1),
+    )
+
+    digest = render_digest(report, frozenset({"risky_transaction", "security_alert"}))
+    awareness = digest.split("## For awareness", 1)[1].split("\n## ", 1)[0]
+
+    assert "**security_alert**: 3 (would trash)" in awareness
+    assert "wallet.example: 2 — Tu sesión se inició con éxito" in awareness
+    assert "stream.example: 1" in awareness
+    assert "**risky_transaction**: 2 (would trash)" in awareness
+    assert (
+        "bank.example: 2 — Creación de retiro sin tarjeta; Retiro sin tarjeta retirado"
+        in awareness
+    )
+    assert "Needs your attention\n\n- None" in digest
+    assert "billing@cloud.example" not in digest  # archived: domain counts only
+
+
+def test_sanitize_masks_long_numbers() -> None:
+    assert (
+        sanitize("Invoice ID 2852430677 for account 901365392888, issue 350")
+        == "Invoice ID ••0677 for account ••2888, issue 350"
+    )
 
 
 def test_archived_and_trashed_show_counts_and_domains_not_subjects() -> None:

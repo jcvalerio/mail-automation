@@ -69,6 +69,7 @@ def test_classify_sends_typed_questions_and_parses_answers() -> None:
     assert result.category == "promotion"
     assert result.category_confidence == 0.91
     assert result.needs_action_probability == 0.05
+    assert result.probabilities == {"promotion": 0.91, "personal": 0.09}
 
 
 def test_unknown_category_is_an_error() -> None:

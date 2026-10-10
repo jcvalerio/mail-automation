@@ -116,7 +116,12 @@ def main(argv: list[str] | None = None) -> int:
         report.applied_ids,
         report.errors,
     )
-    digest_path = write_digest(report, args.digest_dir)
+    awareness_categories = frozenset(
+        name
+        for name, category in config.policy.categories.items()
+        if category.awareness
+    )
+    digest_path = write_digest(report, args.digest_dir, awareness_categories)
 
     # Counts only on stdout: message content stays in the digest and local log.
     actions = Counter(d.action.value for d in report.decisions)

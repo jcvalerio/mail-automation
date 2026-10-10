@@ -1,7 +1,8 @@
 """Markdown digest: the only triage output meant to be read by an AI assistant.
 
 Subjects and senders are attacker-controlled text, so they are flattened,
-stripped of Markdown/HTML control characters, and truncated.
+stripped of Markdown/HTML control characters, and truncated. Long digit runs
+(account, card, invoice, phone numbers) are masked to their last 4 digits.
 """
 
 from __future__ import annotations
@@ -15,10 +16,16 @@ from inbox_triage.triage import RunReport
 
 MAX_FIELD_CHARS = 120
 _UNSAFE_CHARS_RE = re.compile(r"[`<>\[\]|*_#\\]")
+_LONG_NUMBER_RE = re.compile(r"\d{6,}")
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f\u200b-\u200f\u2028\u2029\ufeff]")
 
 
+def mask_numbers(value: str) -> str:
+    return _LONG_NUMBER_RE.sub(lambda match: f"••{match.group()[-4:]}", value)
+
+
 def sanitize(value: str, limit: int = MAX_FIELD_CHARS) -> str:
+    value = mask_numbers(value)
     value = _CONTROL_RE.sub(" ", value)
     value = _UNSAFE_CHARS_RE.sub("", value)
     value = " ".join(value.split())
@@ -27,7 +34,9 @@ def sanitize(value: str, limit: int = MAX_FIELD_CHARS) -> str:
     return value or "(empty)"
 
 
-def render_digest(report: RunReport) -> str:
+def render_digest(
+    report: RunReport, awareness_categories: frozenset[str] = frozenset()
+) -> str:
     decisions = report.decisions
     mode = "APPLIED" if report.apply else "DRY RUN (no Gmail changes)"
     lines = [
@@ -72,6 +81,14 @@ def render_digest(report: RunReport) -> str:
 
     lines += ["", "## Needs your attention", ""]
     lines += _message_lines(sorted(attention, key=_attention_sort_key)) or ["- None"]
+    awareness = [
+        d
+        for d in decisions
+        if d.category in awareness_categories and d not in attention
+    ]
+    if awareness_categories:
+        lines += ["", "## For awareness (handled automatically)", ""]
+        lines += _awareness_lines(awareness, report.apply) or ["- None"]
     lines += ["", "## Review (classifier unsure or unavailable)", ""]
     lines += _message_lines(review) or ["- None"]
     lines += ["", "## Kept in inbox", ""]
@@ -84,12 +101,39 @@ def render_digest(report: RunReport) -> str:
     return "\n".join(lines) + "\n"
 
 
-def write_digest(report: RunReport, digest_dir: Path) -> Path:
+def write_digest(
+    report: RunReport,
+    digest_dir: Path,
+    awareness_categories: frozenset[str] = frozenset(),
+) -> Path:
     digest_dir.mkdir(parents=True, exist_ok=True)
     suffix = "" if report.apply else "-dry-run"
     path = digest_dir / f"{report.started_at:%Y-%m-%d}{suffix}.md"
-    path.write_text(render_digest(report), encoding="utf-8")
+    path.write_text(render_digest(report, awareness_categories), encoding="utf-8")
     return path
+
+
+def _awareness_lines(decisions: list[Decision], applied: bool) -> list[str]:
+    """Per category, per sending platform: count plus distinct subjects."""
+    lines: list[str] = []
+    for category, count in Counter(d.category for d in decisions).most_common():
+        in_category = [d for d in decisions if d.category == category]
+        actions = sorted({d.action.value for d in in_category})
+        verb = ", ".join(a if applied else f"would {a}" for a in actions)
+        lines.append(f"- **{category}**: {count} ({verb})")
+        platforms = Counter(d.message.sender_domain or "unknown" for d in in_category)
+        for domain, n in platforms.most_common():
+            subjects = list(
+                dict.fromkeys(
+                    sanitize(d.message.subject, 70)
+                    for d in in_category
+                    if (d.message.sender_domain or "unknown") == domain
+                )
+            )
+            shown = "; ".join(subjects[:3])
+            more = f" (+{len(subjects) - 3} more)" if len(subjects) > 3 else ""
+            lines.append(f"  - {sanitize(domain, 40)}: {n} — {shown}{more}")
+    return lines
 
 
 def _attention_sort_key(decision: Decision) -> tuple[int, str]:

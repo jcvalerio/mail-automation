@@ -31,38 +31,49 @@ classifier:
 # Categories are also the classifier's choices; descriptions are what it reads.
 # Do not add a catch-all like "other": choice models collapse onto it. Messages
 # that fit no category get low confidence and stay in the inbox for review.
-# action: keep | archive | trash   priority: high | normal | low
+#   action: keep | archive | trash      priority: high | normal | low
+#   human_only: true  -> automated senders (noreply, alerts, unsubscribe lists)
+#                        can never land here; the next-best category is used.
+#   awareness: true   -> listed per platform in the digest's "For awareness"
+#                        section even though it is archived/trashed.
 categories:
-  github_security:
-    description: GitHub or Dependabot security alert, vulnerability, or security fix pull request
-    action: keep
-    priority: high
-  github:
-    description: Other GitHub notification about issues, pull requests, reviews, or CI
-    action: keep
-    priority: normal
   personal:
     description: Message written personally by a human to the recipient
     action: keep
     priority: high
+    human_only: true
   bill_due:
     description: Bill or payment due, failed payment, or renewal that requires action
     action: keep
     priority: high
-  security_alert:
-    description: Account security notice such as new sign-in, session, password change, or verification code
-    action: archive
+  risky_transaction:
+    description: Cardless cash withdrawal, cash advance, or other sensitive money movement notice
+    action: trash
     priority: normal
+    awareness: true
+  security_alert:
+    description: Account security notice such as new sign-in, new device, session, password change, or verification code
+    action: trash
+    priority: normal
+    awareness: true
+  github_security:
+    description: GitHub or Dependabot security alert, vulnerability, or security fix pull request
+    action: archive
+    priority: low
+  github:
+    description: Other GitHub notification about issues, pull requests, reviews, or CI
+    action: archive
+    priority: low
   statement:
     description: Bank, card, utility, or account statement or balance notice
     action: archive
     priority: low
   receipt:
-    description: Purchase receipt, transaction or payment confirmation, shipping or delivery update
+    description: Purchase receipt, transaction or payment confirmation, electronic invoice, shipping or delivery update
     action: archive
     priority: low
   newsletter:
-    description: Newsletter, digest, blog, or content subscription
+    description: Newsletter, digest, blog, social network notification, or content subscription
     action: archive
     priority: low
   promotion:
@@ -71,8 +82,26 @@ categories:
     priority: low
 
 # Rules run before the classifier; first match wins. Within `match`, every key
-# must match; list values match if any item matches.
+# must match; list values match if any item matches. Put personal sender
+# domains in your private config/triage.yaml, not in this tracked example.
 rules:
+  - name: risky-transactions
+    category: risky_transaction
+    match:
+      subject_contains: [retiro sin tarjeta, cardless withdrawal]
+  - name: account-security-notices
+    category: security_alert
+    match:
+      subject_contains:
+        - new sign-in
+        - new device
+        - security alert
+        - verification code
+        - inicio de sesión
+        - sesión se inició
+        - nuevo dispositivo
+        - alerta de seguridad
+        - código de verificación
   - name: github-security
     category: github_security
     match:
@@ -82,20 +111,18 @@ rules:
     category: github
     match:
       sender_domains: [github.com]
-  - name: account-security-notices
-    category: security_alert
-    match:
-      subject_contains:
-        - new sign-in
-        - security alert
-        - verification code
-        - nuevo inicio de sesión
-        - alerta de seguridad
-        - código de verificación
-  - name: bank-statements
+  - name: statements
     category: statement
     match:
-      subject_contains: [estado de cuenta]
+      subject_contains: [estado de cuenta, e-statement, activity statement]
+  - name: e-invoices
+    category: receipt
+    match:
+      subject_contains: [factura electrónica, tiquete electrónico]
+  - name: social-networks
+    category: newsletter
+    match:
+      sender_domains: [linkedin.com, facebookmail.com]
   - name: gmail-promotions-with-unsubscribe
     category: promotion
     match:
