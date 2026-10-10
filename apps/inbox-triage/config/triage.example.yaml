@@ -29,6 +29,8 @@ classifier:
   needs_action_threshold: 0.7
 
 # Categories are also the classifier's choices; descriptions are what it reads.
+# Do not add a catch-all like "other": choice models collapse onto it. Messages
+# that fit no category get low confidence and stay in the inbox for review.
 # action: keep | archive | trash   priority: high | normal | low
 categories:
   github_security:
@@ -67,10 +69,6 @@ categories:
     description: Marketing, sale, offer, coupon, or product announcement
     action: trash
     priority: low
-  other:
-    description: Anything that fits none of the other categories
-    action: keep
-    priority: normal
 
 # Rules run before the classifier; first match wins. Within `match`, every key
 # must match; list values match if any item matches.

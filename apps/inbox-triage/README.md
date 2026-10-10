@@ -56,16 +56,30 @@ uv tool install von-sdk==1.3.7
 security add-generic-password -a "$USER" -s von-api-key -w "$(openssl rand -hex 24)"
 ```
 
-Start it bound to loopback only, with CORS locked down. Von's defaults are
-`0.0.0.0` and `*`.
+Download the weights once (about 3.2 GB). This must happen **before** you start
+the server with `HF_HUB_OFFLINE=1`; with an empty cache the server answers every
+request with HTTP 422 "Failed to load Option-Marker decision weights".
+
+```bash
+$(uv tool dir)/von-sdk/bin/python -c "
+from huggingface_hub import snapshot_download
+print(snapshot_download('wfzyx/von', revision='main', allow_patterns=[
+    'config.json', 'tokenizer.json', 'tokenizer_config.json', 'model.safetensors',
+    'option_marker.pt', 'marker_calibration.json', 'calibration.json']))"
+cat ~/.cache/huggingface/hub/models--wfzyx--von/refs/main   # record the revision
+```
+
+Then start it offline, bound to loopback only, with CORS locked down. Von's
+defaults are `0.0.0.0` and `*`.
 
 ```bash
 export VON_API_KEY="$(security find-generic-password -s von-api-key -w)"
-VON_CORS_ORIGINS=http://127.0.0.1 von serve --host 127.0.0.1 --port 8765
+HF_HUB_OFFLINE=1 VON_CORS_ORIGINS=http://127.0.0.1 \
+  von serve --host 127.0.0.1 --port 8765 --device mps
 ```
 
-The first start downloads about 3 GB of weights from Hugging Face. After that,
-add `HF_HUB_OFFLINE=1` so the server makes no network calls at all.
+The first request after startup takes a few seconds while the model loads;
+after that expect roughly 200 ms per message on an M2.
 
 Then, in another shell:
 

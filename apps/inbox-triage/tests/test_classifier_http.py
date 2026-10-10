@@ -13,6 +13,13 @@ CATEGORIES = {"promotion": "Marketing", "other": "Anything else"}
 class _Handler(BaseHTTPRequestHandler):
     def do_POST(self):  # noqa: N802
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        if self.path == "/broken/v1/systemone":
+            data = json.dumps({"detail": "Failed to load weights"}).encode()
+            self.send_response(422)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
         if self.path == "/redirect/v1/systemone":
             self.send_response(307)
             self.send_header("Location", "http://example.com/v1/systemone")
@@ -65,4 +72,11 @@ def test_redirects_are_refused(server_url) -> None:
     classifier = SystemOneClassifier(f"{server_url}/redirect", CATEGORIES, timeout=5)
 
     with pytest.raises(ClassifierError):
+        classifier.classify(make_message())
+
+
+def test_http_error_includes_server_detail(server_url) -> None:
+    classifier = SystemOneClassifier(f"{server_url}/broken", CATEGORIES, timeout=5)
+
+    with pytest.raises(ClassifierError, match="HTTP 422: Failed to load weights"):
         classifier.classify(make_message())

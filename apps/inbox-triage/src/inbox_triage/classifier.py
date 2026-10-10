@@ -157,5 +157,23 @@ def _urllib_transport(
     try:
         with _OPENER.open(request, timeout=timeout) as response:
             return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        detail = _error_detail(error)
+        raise ClassifierError(
+            f"Classifier request failed: HTTP {error.code}: {detail}"
+        ) from error
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
         raise ClassifierError(f"Classifier request failed: {error}") from error
+
+
+def _error_detail(error: urllib.error.HTTPError, limit: int = 300) -> str:
+    try:
+        body = error.read().decode("utf-8", errors="replace")
+    except OSError:
+        return error.reason or "no detail"
+    try:
+        detail = json.loads(body).get("detail", body)
+    except (json.JSONDecodeError, AttributeError):
+        detail = body
+    detail = " ".join(str(detail).split())
+    return detail[:limit] or str(error.reason)
