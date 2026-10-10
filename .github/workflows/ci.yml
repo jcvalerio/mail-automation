@@ -62,3 +62,6 @@ jobs:
 
       - name: Test moneywiz-export
         run: uv run --directory apps/moneywiz-export pytest
+
+      - name: Test inbox-triage
+        run: uv run --directory apps/inbox-triage pytest

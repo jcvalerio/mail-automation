@@ -7,9 +7,16 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from gmail_core.message_text import extract_message_text
-from gmail_core.models import GmailMessage
+from gmail_core.models import GmailMessage, GmailMessageMetadata
 
 GMAIL_MODIFY_SCOPE = "https://www.googleapis.com/auth/gmail.modify"
+DEFAULT_METADATA_HEADERS = (
+    "From",
+    "Subject",
+    "Date",
+    "List-Id",
+    "List-Unsubscribe",
+)
 
 
 class LabelResolutionError(ValueError):
@@ -77,6 +84,59 @@ class GmailClient:
             label_ids=result.get("labelIds", []),
             text=extract_message_text(payload),
         )
+
+    def get_message_metadata(
+        self,
+        message_id: str,
+        header_names: tuple[str, ...] = DEFAULT_METADATA_HEADERS,
+    ) -> GmailMessageMetadata:
+        result = (
+            self._service.users()
+            .messages()
+            .get(
+                userId="me",
+                id=message_id,
+                format="metadata",
+                metadataHeaders=list(header_names),
+            )
+            .execute()
+        )
+        headers: dict[str, str] = {}
+        for header in result.get("payload", {}).get("headers", []):
+            headers.setdefault(header["name"].lower(), header["value"])
+        internal_date = result.get("internalDate")
+        return GmailMessageMetadata(
+            message_id=result["id"],
+            thread_id=result.get("threadId", ""),
+            label_ids=tuple(result.get("labelIds", [])),
+            snippet=result.get("snippet", ""),
+            internal_date_ms=int(internal_date) if internal_date else None,
+            headers=headers,
+        )
+
+    def modify_message(
+        self,
+        message_id: str,
+        add_label_ids: list[str] | None = None,
+        remove_label_ids: list[str] | None = None,
+    ) -> None:
+        (
+            self._service.users()
+            .messages()
+            .modify(
+                userId="me",
+                id=message_id,
+                body={
+                    "addLabelIds": add_label_ids or [],
+                    "removeLabelIds": remove_label_ids or [],
+                },
+            )
+            .execute()
+        )
+
+    def trash_message(self, message_id: str) -> None:
+        """Move to Trash (recoverable for 30 days). Permanent delete is not exposed."""
+        self._service.users().messages().trash(userId="me", id=message_id).execute()
 
     def ensure_label(self, label_name: str) -> str:
         label_id = self._find_label_id(label_name)

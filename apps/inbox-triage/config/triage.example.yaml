@@ -1,0 +1,105 @@
+# Copy to <repo root>/config/triage.yaml and adjust.
+# The search is always scoped to `in:inbox`; nothing here can widen it.
+
+query:
+  only_unread: true
+  # Leave bank emails to apps/moneywiz-export (run it first).
+  exclude_labels:
+    - banks-bac
+    - banks-scotiabank
+    - banks-promerica
+  # Extra Gmail search terms, ANDed with the inbox scope. Example: newer_than:30d
+  extra: ""
+  max_messages: 200
+
+# Label added to archived messages.
+processed_label: Triage/Processed
+
+classifier:
+  enabled: true
+  # Must be localhost. Any TypeSafe-compatible /v1/systemone server works
+  # (Von, Rizzo Flow, Kev, ollaya).
+  base_url: http://127.0.0.1:8765
+  model: von-latest
+  api_key_env: VON_API_KEY
+  timeout_seconds: 30
+  # Below this calibrated probability the message stays in the inbox for review.
+  min_confidence: 0.85
+  # At or above this probability of "needs your action", always keep + high priority.
+  needs_action_threshold: 0.7
+
+# Categories are also the classifier's choices; descriptions are what it reads.
+# action: keep | archive | trash   priority: high | normal | low
+categories:
+  github_security:
+    description: GitHub or Dependabot security alert, vulnerability, or security fix pull request
+    action: keep
+    priority: high
+  github:
+    description: Other GitHub notification about issues, pull requests, reviews, or CI
+    action: keep
+    priority: normal
+  personal:
+    description: Message written personally by a human to the recipient
+    action: keep
+    priority: high
+  bill_due:
+    description: Bill or payment due, failed payment, or renewal that requires action
+    action: keep
+    priority: high
+  security_alert:
+    description: Account security notice such as new sign-in, session, password change, or verification code
+    action: archive
+    priority: normal
+  statement:
+    description: Bank, card, utility, or account statement or balance notice
+    action: archive
+    priority: low
+  receipt:
+    description: Purchase receipt, transaction or payment confirmation, shipping or delivery update
+    action: archive
+    priority: low
+  newsletter:
+    description: Newsletter, digest, blog, or content subscription
+    action: archive
+    priority: low
+  promotion:
+    description: Marketing, sale, offer, coupon, or product announcement
+    action: trash
+    priority: low
+  other:
+    description: Anything that fits none of the other categories
+    action: keep
+    priority: normal
+
+# Rules run before the classifier; first match wins. Within `match`, every key
+# must match; list values match if any item matches.
+rules:
+  - name: github-security
+    category: github_security
+    match:
+      sender_domains: [github.com]
+      subject_regex: "(security|vulnerab|CVE-|GHSA-|dependabot)"
+  - name: github-other
+    category: github
+    match:
+      sender_domains: [github.com]
+  - name: account-security-notices
+    category: security_alert
+    match:
+      subject_contains:
+        - new sign-in
+        - security alert
+        - verification code
+        - nuevo inicio de sesión
+        - alerta de seguridad
+        - código de verificación
+  - name: bank-statements
+    category: statement
+    match:
+      subject_contains: [estado de cuenta]
+  - name: gmail-promotions-with-unsubscribe
+    category: promotion
+    match:
+      gmail_categories: [promotions]
+      has_list_unsubscribe: true

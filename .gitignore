@@ -9,6 +9,7 @@ secrets/
 config/*.yaml
 !config/*.example.yaml
 
-# Local run outputs (exports, triage state, digests).
+# Local run outputs. data/ is private; digests/ is the AI-readable summary.
 exports/
 data/
+digests/

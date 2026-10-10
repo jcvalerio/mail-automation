@@ -7,6 +7,7 @@ and never sent to a cloud AI service.
 |---|---|
 | `packages/gmail-core` | Shared Gmail client, OAuth, message text extraction |
 | `apps/moneywiz-export` | Bank transaction emails to MoneyWiz CSV |
+| `apps/inbox-triage` | Inbox keep/archive/trash with rules + a localhost classifier, daily digest |
 
 ## Setup
 
@@ -18,4 +19,4 @@ cp apps/moneywiz-export/config/accounts.example.yaml config/accounts.yaml
 uv run gmail-moneywiz-export          # dry run, from the repo root
 ```
 
-See `apps/moneywiz-export/README.md` for exporter details.
+See `apps/moneywiz-export/README.md` and `apps/inbox-triage/README.md` for details.
