@@ -10,15 +10,17 @@ Scope: repository-wide instructions for AI coding agents.
 - Third-party plugin template lives in `examples/third_party_plugin/`.
 
 ## Dev environment
-- Use `uv` for dependency and environment management.
-- Sync dependencies with `uv sync --group dev`.
-- Run the CLI with `uv run gmail-moneywiz-export`.
+- This app is a member of the `mail-automation` uv workspace; see the root `AGENTS.md`.
+- Gmail access (OAuth, client, text extraction) comes from `packages/gmail-core`.
+- Sync dependencies from the repo root with `uv sync --all-packages`.
+- Run the CLI from the repo root with `uv run gmail-moneywiz-export` so it uses
+  the root `secrets/`, `config/`, and `exports/`.
 - List discovered plugins with `uv run gmail-moneywiz-export --list-plugins`.
 
 ## Checks to run
-- Lint: `uv run ruff check .`.
-- Format check: `uv run ruff format --check .`.
-- Tests: `uv run pytest`.
+- Lint (repo root): `uv run ruff check .`.
+- Format check (repo root): `uv run ruff format --check .`.
+- Tests (from this directory; tests use relative `samples/` and `config/` paths): `uv run pytest`.
 - Prefer focused `uv run pytest tests/path.py` while iterating.
 
 ## Code style

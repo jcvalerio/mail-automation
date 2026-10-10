@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Secrets and personal config live at the repo root and are never tracked.
+secrets/
+config/*.yaml
+!config/*.example.yaml
+
+# Local run outputs (exports, triage state, digests).
+exports/
+data/

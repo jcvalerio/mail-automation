@@ -1,5 +1,9 @@
 from dataclasses import asdict, dataclass
 
+from gmail_core import GmailMessage
+
+__all__ = ["GmailMessage", "Transaction"]
+
 
 @dataclass(frozen=True)
 class Transaction:
@@ -24,12 +28,3 @@ class Transaction:
 
     def to_dict(self) -> dict[str, str | None]:
         return asdict(self)
-
-
-@dataclass(frozen=True)
-class GmailMessage:
-    message_id: str
-    subject: str
-    sender: str
-    label_ids: list[str]
-    text: str

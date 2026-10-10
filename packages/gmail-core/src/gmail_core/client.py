@@ -6,8 +6,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from gmail_moneywiz_export.message_text import extract_message_text
-from gmail_moneywiz_export.models import GmailMessage
+from gmail_core.message_text import extract_message_text
+from gmail_core.models import GmailMessage
 
 GMAIL_MODIFY_SCOPE = "https://www.googleapis.com/auth/gmail.modify"
 

@@ -7,9 +7,10 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
+from gmail_core import GmailClient
+
 from gmail_moneywiz_export.config import AppConfig
 from gmail_moneywiz_export.exporter import write_csv
-from gmail_moneywiz_export.gmail_client import GmailClient
 from gmail_moneywiz_export.mapping import AccountMappings
 from gmail_moneywiz_export.moneywiz import MoneyWizHistory, build_moneywiz_rows
 from gmail_moneywiz_export.plugins import (

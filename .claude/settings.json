@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./secrets/**)",
+      "Read(./config/*.yaml)",
+      "Read(./exports/**)",
+      "Read(./data/**)",
+      "Edit(./secrets/**)",
+      "Edit(./data/**)"
+    ]
+  }
+}

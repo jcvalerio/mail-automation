@@ -1,9 +1,9 @@
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-import html
 import re
 
-ZERO_WIDTH_RE = re.compile(r"[\u200b-\u200f\ufeff]")
+from gmail_core import clean_text
+
 WHITESPACE_RE = re.compile(r"\s+")
 AMOUNT_RE = re.compile(r"((?:\d[\d,]*)?\.\d{2})")
 CURRENCY_RE = re.compile(r"\b(CRC|USD)\b", re.IGNORECASE)
@@ -39,14 +39,6 @@ SPANISH_MONTH_ABBR_TO_ENGLISH = {
 
 class NormalizationError(ValueError):
     pass
-
-
-def clean_text(text: str) -> str:
-    text = html.unescape(text)
-    text = text.replace("\xa0", " ")
-    text = ZERO_WIDTH_RE.sub("", text)
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    return text.strip()
 
 
 def normalized_lines(text: str) -> list[str]:

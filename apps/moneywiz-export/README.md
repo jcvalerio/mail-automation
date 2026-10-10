@@ -1,5 +1,9 @@
 # Gmail MoneyWiz Export
 
+> Part of the `mail-automation` uv workspace. Run `uv sync --all-packages` and
+> all `uv run gmail-moneywiz-export` commands from the repo root; `secrets/`,
+> `config/accounts.yaml`, and `exports/` live at the repo root.
+
 [![CI](https://github.com/jcvalerio/gmail-moneywiz-export/actions/workflows/ci.yml/badge.svg)](https://github.com/jcvalerio/gmail-moneywiz-export/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue)](https://github.com/jcvalerio/gmail-moneywiz-export/actions/workflows/ci.yml)
 

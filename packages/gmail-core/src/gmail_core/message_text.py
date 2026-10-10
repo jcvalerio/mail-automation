@@ -2,7 +2,7 @@ from base64 import urlsafe_b64decode
 
 from bs4 import BeautifulSoup
 
-from gmail_moneywiz_export.normalization import clean_text
+from gmail_core.text import clean_text
 
 
 def extract_message_text(payload: dict) -> str:
