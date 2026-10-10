@@ -45,6 +45,11 @@ categories:
     action: keep
     priority: high
     human_only: true
+  direct_message:
+    description: Direct message or mention of you on a social or chat platform
+    action: keep
+    priority: high
+    rule_only: true
   bill_due:
     description: Bill or payment due, failed payment, or renewal that requires action
     action: keep
@@ -128,6 +133,16 @@ rules:
     category: receipt
     match:
       subject_contains: [factura electrónica, tiquete electrónico, tu tiquete]
+  # Must come before social-networks: keep real messages and mentions only.
+  - name: social-direct-senders
+    category: direct_message
+    match:
+      sender_emails: [inmail-hit-reply@linkedin.com, messaging-digest-noreply@linkedin.com]
+  - name: social-mentions
+    category: direct_message
+    match:
+      sender_domains: [linkedin.com, discord.com, facebookmail.com]
+      subject_regex: "mentioned you|sent you (a|\\d+) (new )?messages?|replied to your|te mencionó|te envió (un|\\d+) mensajes?|respondió a tu"
   - name: social-networks
     category: newsletter
     match:

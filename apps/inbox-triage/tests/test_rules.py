@@ -112,3 +112,52 @@ def test_example_rules_cover_spanish_security_and_risky_notices() -> None:
     for subject, category in cases.items():
         decision = policy.decide_by_guard_or_rule(make_message(subject=subject))
         assert decision is not None and decision.category == category, subject
+
+
+def test_social_messages_and_mentions_are_kept_rest_is_newsletter() -> None:
+    from tests.helpers import example_config
+
+    policy = example_config().policy
+    cases = [
+        ("noreply@discord.com", "saoudrizwan mentioned you in Cline", "direct_message"),
+        (
+            "notifications-noreply@linkedin.com",
+            "Ana mentioned you in a comment",
+            "direct_message",
+        ),
+        (
+            "messages-noreply@linkedin.com",
+            "Ana sent you a new message",
+            "direct_message",
+        ),
+        (
+            "messaging-digest-noreply@linkedin.com",
+            "Ana is waiting for your reply",
+            "direct_message",
+        ),
+        (
+            "notifications-noreply@linkedin.com",
+            "Ana te mencionó en un comentario",
+            "direct_message",
+        ),
+        (
+            "notifications-noreply@linkedin.com",
+            "You have 3 new invitations",
+            "newsletter",
+        ),
+        (
+            "messages-noreply@linkedin.com",
+            "Juan, you're popular - 28 profile viewers",
+            "newsletter",
+        ),
+        (
+            "jobs-noreply@linkedin.com",
+            "Engineering Manager at Example Corp",
+            "newsletter",
+        ),
+    ]
+    for sender, subject, category in cases:
+        decision = policy.decide_by_guard_or_rule(
+            make_message(sender=sender, subject=subject)
+        )
+        assert decision is not None and decision.category == category, subject
