@@ -136,3 +136,41 @@ def test_write_digest_names_dry_runs(tmp_path) -> None:
     path = write_digest(report, tmp_path)
 
     assert path.name == "2026-10-10-dry-run.md"
+
+
+def test_awareness_lists_only_handled_messages() -> None:
+    report = _report(
+        [
+            make_metadata(
+                "s1", sender="login@wallet.example", subject="Tu sesión se inició"
+            ),
+            make_metadata("s2", sender="ana@mail.example", subject="Please check this"),
+        ],
+        # s2 reaches the classifier: security_alert, but too unsure to act on.
+        Classification("security_alert", 0.5, 0.1),
+    )
+
+    digest = render_digest(report, frozenset({"security_alert"}))
+    awareness = digest.split("## For awareness", 1)[1].split("\n## ", 1)[0]
+    review = digest.split("## Review", 1)[1].split("\n## ", 1)[0]
+
+    assert "**security_alert**: 1 (would trash)" in awareness
+    assert "mail.example" not in awareness
+    assert "ana@mail.example" in review
+
+
+def test_needs_action_reason_is_shown() -> None:
+    report = _report(
+        [
+            make_metadata(
+                "d", sender="noreply@chat.example", subject="You were mentioned"
+            )
+        ],
+        Classification(
+            "personal", 0.9, 0.86, probabilities={"personal": 0.9, "newsletter": 0.01}
+        ),
+    )
+
+    digest = render_digest(report)
+
+    assert "(needs action 0.86, p=0.01)" in digest

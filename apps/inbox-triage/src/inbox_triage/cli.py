@@ -85,10 +85,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             classifier = SystemOneClassifier(
                 config.classifier.base_url,
-                {
-                    name: category.description
-                    for name, category in config.policy.categories.items()
-                },
+                config.policy.classifier_categories(),
                 model=config.classifier.model,
                 api_key=os.environ.get(config.classifier.api_key_env),
                 timeout=config.classifier.timeout_seconds,

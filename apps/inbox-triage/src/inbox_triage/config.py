@@ -116,5 +116,10 @@ def _parse_categories(data: dict[str, Any]) -> dict[str, CategoryPolicy]:
             priority=Priority(value.get("priority", Priority.NORMAL)),
             human_only=bool(value.get("human_only", False)),
             awareness=bool(value.get("awareness", False)),
+            rule_only=bool(value.get("rule_only", False)),
+        )
+    if all(category.rule_only for category in categories.values()):
+        raise RuleConfigError(
+            "At least one category must be available to the classifier"
         )
     return categories

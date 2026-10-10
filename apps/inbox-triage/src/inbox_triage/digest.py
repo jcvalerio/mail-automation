@@ -84,7 +84,7 @@ def render_digest(
     awareness = [
         d
         for d in decisions
-        if d.category in awareness_categories and d not in attention
+        if d.category in awareness_categories and d.action is not Action.KEEP
     ]
     if awareness_categories:
         lines += ["", "## For awareness (handled automatically)", ""]
@@ -144,14 +144,21 @@ def _message_lines(decisions: list[Decision]) -> list[str]:
     lines = []
     for d in decisions:
         sender = sanitize(d.message.sender_email or d.message.sender, 60)
-        detail = d.rule_name or (
-            f"p={d.confidence:.2f}" if d.confidence is not None else d.source.value
-        )
+        detail = d.rule_name or _model_detail(d)
         lines.append(
             f"- **{d.category}** · {sender} · {sanitize(d.message.subject)} "
             f"({sanitize(detail, 60)})"
         )
     return lines
+
+
+def _model_detail(decision: Decision) -> str:
+    if decision.confidence is None:
+        return decision.source.value
+    detail = f"p={decision.confidence:.2f}"
+    if decision.priority is Priority.HIGH and decision.needs_action_probability:
+        detail = f"needs action {decision.needs_action_probability:.2f}, {detail}"
+    return detail
 
 
 def _summary_lines(decisions: list[Decision]) -> list[str]:

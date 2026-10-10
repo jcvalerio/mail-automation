@@ -54,3 +54,20 @@ def test_rule_with_undefined_category_is_rejected() -> None:
                 ],
             }
         )
+
+
+def test_rule_only_categories_are_not_classifier_choices() -> None:
+    policy = example_config().policy
+
+    choices = policy.classifier_categories()
+
+    assert "fyi" in policy.categories
+    assert "fyi" not in choices
+    assert "promotion" in choices
+
+
+def test_config_needs_a_classifier_category() -> None:
+    with pytest.raises(RuleConfigError, match="classifier"):
+        TriageConfig.from_dict(
+            {"categories": {"fyi": {"description": "x", "rule_only": True}}}
+        )

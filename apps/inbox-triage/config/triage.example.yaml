@@ -35,7 +35,10 @@ classifier:
 #   human_only: true  -> automated senders (noreply, alerts, unsubscribe lists)
 #                        can never land here; the next-best category is used.
 #   awareness: true   -> listed per platform in the digest's "For awareness"
-#                        section even though it is archived/trashed.
+#                        section when archived/trashed.
+#   rule_only: true   -> only rules assign it; never a classifier choice. Use it
+#                        for vague buckets like "fyi" so the model can't collapse
+#                        onto them.
 categories:
   personal:
     description: Message written personally by a human to the recipient
@@ -80,6 +83,12 @@ categories:
     description: Marketing, sale, offer, coupon, or product announcement
     action: trash
     priority: low
+  fyi:
+    description: Notices from known platforms you only want summarized
+    action: archive
+    priority: low
+    awareness: true
+    rule_only: true
 
 # Rules run before the classifier; first match wins. Within `match`, every key
 # must match; list values match if any item matches. Put personal sender
@@ -118,7 +127,7 @@ rules:
   - name: e-invoices
     category: receipt
     match:
-      subject_contains: [factura electrónica, tiquete electrónico]
+      subject_contains: [factura electrónica, tiquete electrónico, tu tiquete]
   - name: social-networks
     category: newsletter
     match:
