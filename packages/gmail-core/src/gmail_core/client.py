@@ -114,6 +114,21 @@ class GmailClient:
             headers=headers,
         )
 
+    def get_label_ids(self, message_id: str) -> tuple[str, ...] | None:
+        """Current labels only (no headers or body); None if the message is gone."""
+        try:
+            result = (
+                self._service.users()
+                .messages()
+                .get(userId="me", id=message_id, format="minimal")
+                .execute()
+            )
+        except HttpError as error:
+            if getattr(error.resp, "status", None) == 404:
+                return None
+            raise
+        return tuple(result.get("labelIds", []))
+
     def modify_message(
         self,
         message_id: str,

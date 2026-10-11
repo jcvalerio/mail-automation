@@ -103,6 +103,38 @@ uv run inbox-triage --apply                  # only after reviewing dry runs
 Any other `/v1/systemone` server (Rizzo Flow, Kev, ollaya) works by changing
 `classifier.base_url`. Non-localhost URLs are refused.
 
+## Quality loop: audit and report
+
+```bash
+uv run inbox-triage audit      # daily, after `--apply` runs
+uv run inbox-triage report     # quarterly (default window 90 days)
+```
+
+`audit` re-checks the current Gmail labels of messages handled in the last
+25 days (before Trash empties at 30) and records what you did afterwards:
+
+| Outcome | Meaning |
+|---|---|
+| `rescued` | Triage trashed or archived it, and you moved it back (false positive) |
+| `noise` | Triage kept it, and you trashed or archived it while still unread |
+| `confirmed` | You agreed (filed a kept message after reading, or trashed an archived one) |
+| `ok` / `gone` | No change yet / Gmail no longer has it |
+
+`report` writes `digests/report-YYYY-MM-DD.md`: scorecard (review rate,
+rescues, noise), matches per rule and per category, new senders, awareness
+trends, a random sample of trashed mail to skim, and proposals:
+
+- **Remove rule:** no matches in the window and active for at least
+  `--min-rule-age-days` (default 60).
+- **Review rule/category:** caused rescues.
+- **Add rule:** a sender needed review 3 or more times, or its kept mail was
+  removed unread.
+- **Unsubscribe:** a sender with an unsubscribe link had 5 or more messages
+  trashed.
+
+Suggested cadence: weekly for the first month after `--apply`, then monthly,
+then quarterly once rescues stay at 0.
+
 ## Recommended rollout
 
 1. Run dry runs for about a week and read `digests/*-dry-run.md`.

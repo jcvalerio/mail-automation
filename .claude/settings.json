@@ -2,10 +2,11 @@
   "permissions": {
     "deny": [
       "Read(./secrets/**)",
-      "Read(./config/*.yaml)",
+      "Read(./config/accounts.yaml)",
       "Read(./exports/**)",
       "Read(./data/**)",
       "Edit(./secrets/**)",
+      "Edit(./config/accounts.yaml)",
       "Edit(./data/**)"
     ]
   }
