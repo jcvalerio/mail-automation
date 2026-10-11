@@ -50,6 +50,11 @@ def render_digest(
         f"- Decided by: {_format_counter(Counter(d.source.value for d in decisions))}",
         f"- Actions: {_format_counter(Counter(d.action.value for d in decisions))}",
     ]
+    if report.more_remaining:
+        lines.append(
+            f"- ⚠️ Stopped at the {report.limit}-message cap; more matching messages "
+            "remain in the inbox. Raise query.max_messages or run again."
+        )
     if report.skipped_already_handled:
         lines.append(
             f"- Already handled in earlier runs and still in inbox: "

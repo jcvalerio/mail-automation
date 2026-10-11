@@ -174,3 +174,11 @@ def test_needs_action_reason_is_shown() -> None:
     digest = render_digest(report)
 
     assert "(needs action 0.86, p=0.01)" in digest
+
+
+def test_digest_warns_when_cap_is_hit() -> None:
+    report = _report([], Classification("receipt", 0.95, 0.1))
+    report.limit = 1000
+    report.more_remaining = True
+
+    assert "Stopped at the 1000-message cap" in render_digest(report)

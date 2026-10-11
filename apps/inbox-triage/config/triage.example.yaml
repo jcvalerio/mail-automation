@@ -10,7 +10,9 @@ query:
     - banks-promerica
   # Extra Gmail search terms, ANDed with the inbox scope. Example: newer_than:30d
   extra: ""
-  max_messages: 200
+  # Safety cap per run, sized well above a normal inbox. If more messages
+  # match, the digest says so instead of cutting off silently.
+  max_messages: 1000
 
 # Label added to archived messages.
 processed_label: Triage/Processed

@@ -42,6 +42,8 @@ class RunReport:
     classifier_error: str | None = None
     skipped_already_handled: int = 0
     skipped_not_in_inbox: int = 0
+    limit: int | None = None
+    more_remaining: bool = False
 
     @property
     def mode(self) -> str:
@@ -70,7 +72,14 @@ def run_triage(
     if classifier is None:
         report.classifier_error = "Classifier disabled"
 
-    for message_id in mailbox.list_message_ids(query, limit):
+    # Ask for one extra id so hitting the cap is reported, never silent.
+    message_ids = mailbox.list_message_ids(query, limit + 1 if limit else None)
+    if limit and len(message_ids) > limit:
+        report.limit = limit
+        report.more_remaining = True
+        message_ids = message_ids[:limit]
+
+    for message_id in message_ids:
         if apply and message_id in already_handled:
             report.skipped_already_handled += 1
             continue

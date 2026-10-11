@@ -18,7 +18,7 @@ class QueryConfig:
     only_unread: bool = True
     exclude_labels: tuple[str, ...] = ()
     extra: str = ""
-    max_messages: int = 200
+    max_messages: int = 1000
 
 
 @dataclass(frozen=True)
@@ -67,7 +67,7 @@ class TriageConfig:
                 only_unread=bool(query_data.get("only_unread", True)),
                 exclude_labels=tuple(query_data.get("exclude_labels") or ()),
                 extra=str(query_data.get("extra") or "").strip(),
-                max_messages=int(query_data.get("max_messages", 200)),
+                max_messages=int(query_data.get("max_messages", 1000)),
             ),
             classifier=ClassifierConfig(
                 enabled=bool(classifier_data.get("enabled", True)),

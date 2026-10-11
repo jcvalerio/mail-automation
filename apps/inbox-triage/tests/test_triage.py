@@ -14,7 +14,7 @@ NEWSLETTER = make_metadata("news", sender="News <hi@news.example>")
 NOT_IN_INBOX = make_metadata("sent", label_ids=("SENT",))
 
 
-def _run(mailbox, classifier, *, apply, already_handled=frozenset()):
+def _run(mailbox, classifier, *, apply, already_handled=frozenset(), limit=None):
     config = example_config()
     return run_triage(
         mailbox,
@@ -23,7 +23,7 @@ def _run(mailbox, classifier, *, apply, already_handled=frozenset()):
         query="in:inbox",
         processed_label=config.processed_label,
         apply=apply,
-        limit=None,
+        limit=limit,
         already_handled=set(already_handled),
         started_at=datetime(2026, 10, 10, 7, 0),
     )
@@ -106,3 +106,24 @@ def test_gmail_errors_are_recorded_per_message() -> None:
 
     assert report.errors == {"promo": "boom"}
     assert report.applied_ids == {"news"}
+
+
+def test_hitting_the_cap_is_reported() -> None:
+    mailbox = FakeMailbox([PROMO, NEWSLETTER, make_metadata("third")])
+    classifier = FakeClassifier(Classification("newsletter", 0.95, 0.1))
+
+    report = _run(mailbox, classifier, apply=False, limit=2)
+
+    assert len(report.decisions) == 2
+    assert report.more_remaining is True
+    assert report.limit == 2
+
+
+def test_under_the_cap_is_not_flagged() -> None:
+    mailbox = FakeMailbox([PROMO, NEWSLETTER])
+    classifier = FakeClassifier(Classification("newsletter", 0.95, 0.1))
+
+    report = _run(mailbox, classifier, apply=False, limit=2)
+
+    assert len(report.decisions) == 2
+    assert report.more_remaining is False

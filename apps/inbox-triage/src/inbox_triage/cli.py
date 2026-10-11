@@ -129,6 +129,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Decided by: {dict(sources)}")
     if report.skipped_already_handled:
         print(f"Skipped (already handled): {report.skipped_already_handled}")
+    if report.more_remaining:
+        print(
+            f"Stopped at the {report.limit}-message cap; more messages remain",
+            file=sys.stderr,
+        )
     if report.classifier_error:
         print(f"Classifier: {report.classifier_error}", file=sys.stderr)
     if report.errors:
