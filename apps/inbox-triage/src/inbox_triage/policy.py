@@ -85,8 +85,13 @@ class Policy:
         classification = self._exclude_human_only(message, classification)
         needs_action = classification.needs_action_probability
         if needs_action is not None and needs_action >= self.needs_action_threshold:
+            # Only trust the category (and its labels) when it is confident;
+            # the message is kept either way.
+            confident = classification.category_confidence >= self.min_confidence
             return Decision(
-                labels=self.categories[classification.category].labels,
+                labels=self.categories[classification.category].labels
+                if confident
+                else (),
                 message=message,
                 category=classification.category,
                 action=Action.KEEP,

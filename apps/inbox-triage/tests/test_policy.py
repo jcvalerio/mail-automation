@@ -109,3 +109,23 @@ def test_human_sender_can_be_personal() -> None:
 
     assert decision.category == "personal"
     assert decision.priority is Priority.HIGH
+
+
+def test_needs_action_with_unsure_category_gets_no_category_labels() -> None:
+    policy = example_config().policy
+
+    unsure = policy.decide_by_model(
+        make_message(sender="Calendar <calendar-notification@google.example>"),
+        Classification(
+            "risky_transaction", 0.09, 0.8, probabilities={"risky_transaction": 0.09}
+        ),
+    )
+    sure = policy.decide_by_model(
+        make_message(sender="Bank <alerta@bank.example>"),
+        Classification(
+            "risky_transaction", 0.95, 0.8, probabilities={"risky_transaction": 0.95}
+        ),
+    )
+
+    assert unsure.action is Action.KEEP and unsure.labels == ()
+    assert sure.action is Action.KEEP and sure.labels == ("Triage/Awareness",)
