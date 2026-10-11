@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from datetime import datetime
 
 from inbox_triage.models import (
     Action,
@@ -25,6 +26,10 @@ class CategoryPolicy:
     awareness: bool = False
     # Assigned by rules only; never offered to the classifier as a choice.
     rule_only: bool = False
+    # Gmail labels added when this category is decided by a rule or a confident
+    # model result (kept, archived, or trashed). Trash keeps labels until Gmail
+    # empties it after 30 days.
+    labels: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -47,7 +52,9 @@ class Policy:
         except KeyError as error:
             raise KeyError(f"Category '{name}' is not defined in policy") from error
 
-    def decide_by_guard_or_rule(self, message: InboxMessage) -> Decision | None:
+    def decide_by_guard_or_rule(
+        self, message: InboxMessage, now: datetime | None = None
+    ) -> Decision | None:
         if message.is_starred:
             return Decision(
                 message=message,
@@ -57,11 +64,12 @@ class Policy:
                 source=DecisionSource.GUARD,
                 reason="Starred messages are never touched",
             )
-        rule = first_matching_rule(self.rules, message)
+        rule = first_matching_rule(self.rules, message, now)
         if rule is None:
             return None
         category = self.category(rule.category)
         return Decision(
+            labels=category.labels,
             message=message,
             category=rule.category,
             action=rule.action or category.action,
@@ -78,6 +86,7 @@ class Policy:
         needs_action = classification.needs_action_probability
         if needs_action is not None and needs_action >= self.needs_action_threshold:
             return Decision(
+                labels=self.categories[classification.category].labels,
                 message=message,
                 category=classification.category,
                 action=Action.KEEP,
@@ -103,6 +112,7 @@ class Policy:
             )
         category = self.category(classification.category)
         return Decision(
+            labels=category.labels,
             message=message,
             category=classification.category,
             action=category.action,

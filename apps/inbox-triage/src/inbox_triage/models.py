@@ -121,3 +121,4 @@ class Decision:
     rule_name: str | None = None
     confidence: float | None = None
     needs_action_probability: float | None = None
+    labels: tuple[str, ...] = ()

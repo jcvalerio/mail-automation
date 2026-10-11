@@ -127,3 +127,46 @@ def test_under_the_cap_is_not_flagged() -> None:
 
     assert len(report.decisions) == 2
     assert report.more_remaining is False
+
+
+class _LabelMailbox(FakeMailbox):
+    def ensure_label(self, label_name: str) -> str:
+        self.labels_created.append(label_name)
+        return f"id:{label_name}"
+
+
+def test_apply_labels_trashed_archived_and_kept_messages() -> None:
+    risky = make_metadata("risky", subject="Creación de retiro sin tarjeta")
+    fyi_like = make_metadata(
+        "sess", sender="login@wallet.example", subject="Tu sesión se inició con éxito"
+    )
+    mailbox = _LabelMailbox([risky, fyi_like, NEWSLETTER])
+    classifier = FakeClassifier(Classification("newsletter", 0.95, 0.1))
+
+    _run(mailbox, classifier, apply=True)
+
+    assert ("risky", ["id:Triage/Awareness"], []) in mailbox.modified
+    assert ("sess", ["id:Triage/Awareness"], []) in mailbox.modified
+    assert mailbox.trashed == ["risky", "sess"]
+    assert ("news", ["id:Triage/Processed"], ["INBOX"]) in mailbox.modified
+    # Each label is resolved once per run.
+    assert mailbox.labels_created.count("Triage/Awareness") == 1
+
+
+def test_dry_run_adds_no_labels() -> None:
+    risky = make_metadata("risky", subject="Creación de retiro sin tarjeta")
+    mailbox = _LabelMailbox([risky])
+
+    _run(mailbox, FakeClassifier(Classification("newsletter", 0.95, 0.1)), apply=False)
+
+    assert mailbox.modified == [] and mailbox.labels_created == []
+
+
+def test_uncertain_decisions_get_no_category_labels() -> None:
+    mailbox = _LabelMailbox([NEWSLETTER])
+    classifier = FakeClassifier(Classification("security_alert", 0.4, 0.1))
+
+    report = _run(mailbox, classifier, apply=True)
+
+    assert report.decisions[0].labels == ()
+    assert mailbox.modified == []

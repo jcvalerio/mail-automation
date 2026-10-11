@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from inbox_triage.models import Action, InboxMessage, Priority
@@ -26,6 +27,8 @@ class Rule:
     gmail_categories: tuple[str, ...] = ()
     list_id_contains: tuple[str, ...] = ()
     has_list_unsubscribe: bool | None = None
+    older_than_days: int | None = None
+    newer_than_days: int | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Rule:
@@ -45,6 +48,8 @@ class Rule:
             )
         subject_regex = match.get("subject_regex")
         has_list_unsubscribe = match.get("has_list_unsubscribe")
+        older_than_days = match.get("older_than_days")
+        newer_than_days = match.get("newer_than_days")
         return cls(
             name=name,
             category=category,
@@ -61,9 +66,11 @@ class Rule:
             has_list_unsubscribe=None
             if has_list_unsubscribe is None
             else bool(has_list_unsubscribe),
+            older_than_days=_days(name, "older_than_days", older_than_days),
+            newer_than_days=_days(name, "newer_than_days", newer_than_days),
         )
 
-    def matches(self, message: InboxMessage) -> bool:
+    def matches(self, message: InboxMessage, now: datetime | None = None) -> bool:
         subject = message.subject.casefold()
         checks = [
             not self.sender_emails or message.sender_email in self.sender_emails,
@@ -84,8 +91,25 @@ class Rule:
             ),
             self.has_list_unsubscribe is None
             or message.has_list_unsubscribe == self.has_list_unsubscribe,
+            self._age_matches(message, now),
         ]
         return all(checks)
+
+    def _age_matches(self, message: InboxMessage, now: datetime | None) -> bool:
+        if self.older_than_days is None and self.newer_than_days is None:
+            return True
+        if message.received_at is None:
+            return False  # unknown age: never act on an age rule
+        age = (now or datetime.now(UTC)).astimezone(UTC) - message.received_at
+        if self.older_than_days is not None and age <= timedelta(
+            days=self.older_than_days
+        ):
+            return False
+        if self.newer_than_days is not None and age >= timedelta(
+            days=self.newer_than_days
+        ):
+            return False
+        return True
 
 
 _MATCH_KEYS = {
@@ -96,11 +120,23 @@ _MATCH_KEYS = {
     "gmail_categories",
     "list_id_contains",
     "has_list_unsubscribe",
+    "older_than_days",
+    "newer_than_days",
 }
 
 
-def first_matching_rule(rules: list[Rule], message: InboxMessage) -> Rule | None:
-    return next((rule for rule in rules if rule.matches(message)), None)
+def first_matching_rule(
+    rules: list[Rule], message: InboxMessage, now: datetime | None = None
+) -> Rule | None:
+    return next((rule for rule in rules if rule.matches(message, now)), None)
+
+
+def _days(rule_name: str, key: str, value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise RuleConfigError(f"Rule '{rule_name}': {key} must be a whole number >= 0")
+    return value
 
 
 def _domain_matches(actual: str, expected: str) -> bool:

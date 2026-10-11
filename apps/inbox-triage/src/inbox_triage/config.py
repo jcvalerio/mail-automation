@@ -117,9 +117,37 @@ def _parse_categories(data: dict[str, Any]) -> dict[str, CategoryPolicy]:
             human_only=bool(value.get("human_only", False)),
             awareness=bool(value.get("awareness", False)),
             rule_only=bool(value.get("rule_only", False)),
+            labels=_labels(name, value.get("labels")),
         )
     if all(category.rule_only for category in categories.values()):
         raise RuleConfigError(
             "At least one category must be available to the classifier"
         )
     return categories
+
+
+def _labels(category_name: str, value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        value = [value]
+    labels = tuple(str(label).strip() for label in value if str(label).strip())
+    for label in labels:
+        if label.upper() in _SYSTEM_LABELS:
+            raise RuleConfigError(
+                f"Category '{category_name}' cannot add system label '{label}'"
+            )
+    return labels
+
+
+# Labels with built-in Gmail behavior; adding them would bypass triage policy.
+_SYSTEM_LABELS = {
+    "INBOX",
+    "TRASH",
+    "SPAM",
+    "STARRED",
+    "IMPORTANT",
+    "UNREAD",
+    "SENT",
+    "DRAFT",
+}

@@ -41,6 +41,10 @@ classifier:
 #   rule_only: true   -> only rules assign it; never a classifier choice. Use it
 #                        for vague buckets like "fyi" so the model can't collapse
 #                        onto them.
+#   labels: [...]     -> Gmail labels added when a rule or a confident model
+#                        result picks this category (kept, archived or trashed).
+#                        Trashed mail keeps its labels until Gmail empties the
+#                        Trash after 30 days: search `label:triage-awareness in:trash`.
 categories:
   personal:
     description: Message written personally by a human to the recipient
@@ -61,11 +65,13 @@ categories:
     action: trash
     priority: normal
     awareness: true
+    labels: [Triage/Awareness]
   security_alert:
     description: Account security notice such as new sign-in, new device, session, password change, or verification code
     action: trash
     priority: normal
     awareness: true
+    labels: [Triage/Awareness]
   github_security:
     description: GitHub or Dependabot security alert, vulnerability, or security fix pull request
     action: archive
@@ -96,10 +102,31 @@ categories:
     priority: low
     awareness: true
     rule_only: true
+    labels: [Triage/Awareness]
+  school:
+    description: Messages from your children's school
+    action: keep
+    priority: normal
+    rule_only: true
+    labels: [Triage/School]
 
 # Rules run before the classifier; first match wins. Within `match`, every key
 # must match; list values match if any item matches. Put personal sender
 # domains in your private config/triage.yaml, not in this tracked example.
+# Age conditions (`older_than_days`, `newer_than_days`) use the date Gmail
+# received the message; messages with no date never match them.
+#
+# Example (private config): keep recent school mail, archive it after 30 days.
+#   - name: school-old
+#     category: school
+#     action: archive            # overrides the category's keep
+#     match:
+#       sender_domains: [school.example]
+#       older_than_days: 30
+#   - name: school
+#     category: school
+#     match:
+#       sender_domains: [school.example]
 rules:
   - name: risky-transactions
     category: risky_transaction
@@ -134,7 +161,7 @@ rules:
   - name: e-invoices
     category: receipt
     match:
-      subject_contains: [factura electrónica, tiquete electrónico, tu tiquete]
+      subject_contains: [factura electrónica, tiquete electrónico, tu tiquete, acuse electrónico]
   # Must come before social-networks: keep real messages and mentions only.
   - name: social-direct-senders
     category: direct_message

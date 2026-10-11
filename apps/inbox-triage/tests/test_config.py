@@ -71,3 +71,19 @@ def test_config_needs_a_classifier_category() -> None:
         TriageConfig.from_dict(
             {"categories": {"fyi": {"description": "x", "rule_only": True}}}
         )
+
+
+def test_awareness_categories_carry_the_awareness_label() -> None:
+    policy = example_config().policy
+
+    for name in ("fyi", "security_alert", "risky_transaction"):
+        assert policy.categories[name].labels == ("Triage/Awareness",)
+    assert policy.categories["school"].labels == ("Triage/School",)
+
+
+@pytest.mark.parametrize("label", ["INBOX", "trash", "Starred"])
+def test_system_labels_are_rejected(label) -> None:
+    with pytest.raises(RuleConfigError, match="system label"):
+        TriageConfig.from_dict(
+            {"categories": {"other": {"description": "x", "labels": [label]}}}
+        )

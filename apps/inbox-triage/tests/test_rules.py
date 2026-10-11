@@ -161,3 +161,50 @@ def test_social_messages_and_mentions_are_kept_rest_is_newsletter() -> None:
             make_message(sender=sender, subject=subject)
         )
         assert decision is not None and decision.category == category, subject
+
+
+def test_age_conditions_use_received_date() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from gmail_core import GmailMessageMetadata
+
+    from inbox_triage.models import InboxMessage
+
+    now = datetime(2026, 10, 11, 12, 0, tzinfo=UTC)
+
+    def message_aged(days: float | None) -> InboxMessage:
+        received_ms = (
+            None
+            if days is None
+            else int((now - timedelta(days=days)).timestamp() * 1000)
+        )
+        return InboxMessage.from_metadata(
+            GmailMessageMetadata(
+                "m", "t", ("INBOX",), "", received_ms, {"from": "a@school.example"}
+            )
+        )
+
+    old_rule = Rule.from_dict(
+        {
+            "name": "old",
+            "category": "school",
+            "match": {"sender_domains": ["school.example"], "older_than_days": 30},
+        }
+    )
+    recent_rule = Rule.from_dict(
+        {"name": "recent", "category": "school", "match": {"newer_than_days": 7}}
+    )
+
+    assert old_rule.matches(message_aged(45), now)
+    assert not old_rule.matches(message_aged(10), now)
+    assert not old_rule.matches(message_aged(None), now)
+    assert recent_rule.matches(message_aged(2), now)
+    assert not recent_rule.matches(message_aged(8), now)
+
+
+@pytest.mark.parametrize("value", [-1, "30", 2.5, True])
+def test_invalid_age_values_are_rejected(value) -> None:
+    with pytest.raises(RuleConfigError, match="older_than_days"):
+        Rule.from_dict(
+            {"name": "r", "category": "c", "match": {"older_than_days": value}}
+        )

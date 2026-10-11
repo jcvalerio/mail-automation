@@ -21,8 +21,13 @@ classifier running on `localhost`.
 4. **Fail closed:** if the classifier is down or returns something invalid, the
    remaining messages stay in the inbox.
 
-Archived messages get the `Triage/Processed` label. Trash is Gmail's Trash
-(recoverable for 30 days); permanent deletion is not implemented.
+Archived messages get the `Triage/Processed` label. Categories can add their
+own labels (e.g. `Triage/Awareness`, `Triage/School`), applied to kept,
+archived, and trashed messages alike. Trash is Gmail's Trash (recoverable,
+labels intact, for 30 days); permanent deletion is not implemented.
+
+Rules can also match on age (`older_than_days`, `newer_than_days`), e.g. to
+archive school mail once it is a month old.
 
 ## Outputs
 

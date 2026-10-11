@@ -89,7 +89,9 @@ def run_triage(
         if INBOX_LABEL not in message.label_ids:
             report.skipped_not_in_inbox += 1
             continue
-        report.decisions.append(_decide(policy, classifier, message, report))
+        report.decisions.append(
+            _decide(policy, classifier, message, report, started_at)
+        )
 
     if apply:
         _apply(mailbox, report, processed_label)
@@ -101,8 +103,9 @@ def _decide(
     classifier: Classifier | None,
     message: InboxMessage,
     report: RunReport,
+    now: datetime,
 ) -> Decision:
-    decision = policy.decide_by_guard_or_rule(message)
+    decision = policy.decide_by_guard_or_rule(message, now)
     if decision is not None:
         return decision
     if classifier is None or report.classifier_error:
@@ -117,21 +120,29 @@ def _decide(
 
 
 def _apply(mailbox: Mailbox, report: RunReport, processed_label: str) -> None:
-    processed_label_id: str | None = None
+    label_ids: dict[str, str] = {}
+
+    def label_id(name: str) -> str:
+        if name not in label_ids:
+            label_ids[name] = mailbox.ensure_label(name)
+        return label_ids[name]
+
     for decision in report.decisions:
         message_id = decision.message.message_id
         try:
+            extra_labels = [label_id(name) for name in decision.labels]
             if decision.action is Action.ARCHIVE:
-                processed_label_id = processed_label_id or mailbox.ensure_label(
-                    processed_label
-                )
                 mailbox.modify_message(
                     message_id,
-                    add_label_ids=[processed_label_id],
+                    add_label_ids=[label_id(processed_label), *extra_labels],
                     remove_label_ids=[INBOX_LABEL],
                 )
             elif decision.action is Action.TRASH:
+                if extra_labels:
+                    mailbox.modify_message(message_id, add_label_ids=extra_labels)
                 mailbox.trash_message(message_id)
+            elif extra_labels:
+                mailbox.modify_message(message_id, add_label_ids=extra_labels)
             report.applied_ids.add(message_id)
         except Exception as error:  # noqa: BLE001
             report.errors[message_id] = str(error)
