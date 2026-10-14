@@ -23,8 +23,10 @@ See `apps/moneywiz-export/README.md` and `apps/inbox-triage/README.md` for detai
 
 ## Daily schedule (launchd)
 
-`scripts/morning.sh` runs, in order: `inbox-triage audit`, `inbox-triage --apply`, and `inbox-triage report` on the review cadence (Mondays for the
-first month after the first apply, then the 1st of each month, then quarterly). It starts
+`scripts/morning.sh` runs, in order: `inbox-triage audit`, `inbox-triage --apply`, and
+`inbox-triage report --since-days N` on the review cadence (Mondays with a 7-day window
+for the first month after the first apply, then the 1st of each month with 31 days, then
+the 1st of Jan/Apr/Jul/Oct with 92 days). It starts
 Von on loopback if it isn't running and stops it afterwards, then shows a macOS
 notification with counts only. Logs go to `data/logs/` (private).
 
@@ -36,6 +38,7 @@ scripts/install-launchd.sh 2026-10-11        # date of your first --apply; daily
 launchctl kickstart gui/$(id -u)/dev.mail-automation.morning   # run once now
 scripts/install-launchd.sh --uninstall
 MORNING_DRY_RUN=1 scripts/morning.sh         # manual dry run of the whole sequence
+uv run inbox-triage report --since-days 7    # report on demand, from the repo root
 ```
 
 Scheduled runs set `GMAIL_NONINTERACTIVE=1`, so an expired Gmail token fails the
