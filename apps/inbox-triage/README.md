@@ -106,7 +106,7 @@ Any other `/v1/systemone` server (Rizzo Flow, Kev, ollaya) works by changing
 ## Quality loop: audit and report
 
 ```bash
-uv run inbox-triage audit      # daily, after `--apply` runs
+uv run inbox-triage audit      # daily, before `--apply` and before emptying Trash
 uv run inbox-triage report     # quarterly (default window 90 days)
 ```
 

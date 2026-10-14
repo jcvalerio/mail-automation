@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from google.auth.transport.requests import Request
@@ -255,6 +256,12 @@ class GmailClient:
                 return creds
             creds = None
 
+        if os.environ.get("GMAIL_NONINTERACTIVE") == "1":
+            # Scheduled runs (launchd) have no one to finish a browser login.
+            raise RuntimeError(
+                f"Gmail token missing or invalid at {self._token_path}; "
+                "run any CLI once interactively to sign in again."
+            )
         flow = InstalledAppFlow.from_client_secrets_file(
             str(self._credentials_path), [GMAIL_MODIFY_SCOPE]
         )

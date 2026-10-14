@@ -15,6 +15,7 @@ Package-specific rules live in each member's own `AGENTS.md` and also apply.
 ## Dev environment
 - Sync: `uv sync --all-packages`.
 - Run: `uv run gmail-moneywiz-export` and `uv run inbox-triage` (from the repo root).
+- Schedule: `scripts/morning.sh` via launchd (`scripts/install-launchd.sh`); logs in `data/logs/`.
 
 ## Checks to run
 - Lint: `uv run ruff check .`.
