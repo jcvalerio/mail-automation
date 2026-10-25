@@ -24,6 +24,8 @@ class CategoryPolicy:
     human_only: bool = False
     # List these in the digest's "For awareness" section even when handled.
     awareness: bool = False
+    # Kept messages are listed with their Gmail preview in the phone brief.
+    brief: bool = False
     # Assigned by rules only; never offered to the classifier as a choice.
     rule_only: bool = False
     # Gmail labels added when this category is decided by a rule or a confident

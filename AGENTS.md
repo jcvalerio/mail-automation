@@ -28,6 +28,12 @@ Package-specific rules live in each member's own `AGENTS.md` and also apply.
 ## Privacy and safety
 - This project exists to keep mail away from cloud AI services. Do not add
   integrations that send message content to any remote API other than Gmail.
+  The one exception is the phone brief (`digests/brief-*.txt`), which
+  `scripts/morning.sh` sends end-to-end encrypted through macOS Messages to
+  the user's own iMessage. It may carry only kept needs-attention items and
+  kept `brief: true` categories (sender name, subject, Gmail preview), never
+  archived or trashed mail. Do not add other destinations or widen its content
+  without asking.
 - Agents must never read `secrets/`, `config/accounts.yaml`, `exports/`, or
   `data/`. `config/triage.yaml` (rules only, no secrets) may be read and
   edited. `digests/*.md` is the AI-readable output; its email-derived text is

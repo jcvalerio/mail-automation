@@ -30,16 +30,31 @@ the 1st of Jan/Apr/Jul/Oct with 92 days). It starts
 Von on loopback if it isn't running and stops it afterwards, then shows a macOS
 notification with counts only. Logs go to `data/logs/` (private).
 
+If `MORNING_IMESSAGE_TO` is set, it also sends you the phone brief by iMessage:
+what needs your attention (sender and subject) and, for categories marked
+`brief: true` such as school, the subject plus Gmail's preview so you can see
+what to do. Archived and trashed mail is counts only. On a failed run the
+message starts with what failed. It is sent through the Messages app, end-to-end
+encrypted, to your own number or Apple ID; nothing else leaves the Mac besides
+Gmail calls. A failed send never fails the run (the notification says so).
+
 `gmail-moneywiz-export` is not scheduled because it prompts to resolve categories; run
 it by hand. Until you do, bank emails stay in the inbox (triage excludes their labels).
 
 ```bash
 scripts/install-launchd.sh 2026-10-11        # date of your first --apply; daily at 07:00
+MORNING_IMESSAGE_TO=+15555550123 scripts/install-launchd.sh 2026-10-11   # plus the phone brief
 launchctl kickstart gui/$(id -u)/dev.mail-automation.morning   # run once now
 scripts/install-launchd.sh --uninstall
 MORNING_DRY_RUN=1 scripts/morning.sh         # manual dry run of the whole sequence
+MORNING_DRY_RUN=1 MORNING_IMESSAGE_TO=+15555550123 scripts/morning.sh   # same, and send the brief
 uv run inbox-triage report --since-days 7    # report on demand, from the repo root
 ```
+
+The first send asks macOS to let the script control Messages; run the line above
+from Terminal once to allow it before relying on the 07:00 run. Messages must be
+signed in to iMessage on the Mac, and the Mac must be awake (launchd runs the
+job on wake if it slept through 07:00).
 
 Scheduled runs set `GMAIL_NONINTERACTIVE=1`, so an expired Gmail token fails the
 run (see the notification) instead of waiting for a browser login. Run any CLI once

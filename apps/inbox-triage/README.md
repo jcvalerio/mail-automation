@@ -34,6 +34,7 @@ archive school mail once it is a month old.
 | Path (repo root) | Contents | AI assistants may read |
 |---|---|---|
 | `digests/YYYY-MM-DD[-dry-run].md` | Summary, needs-attention list, counts by category and sender domain | Yes |
+| `digests/brief-YYYY-MM-DD[-dry-run].txt` | Phone brief: counts, needs-attention items, kept `brief: true` categories with Gmail's preview | Yes |
 | `data/triage.sqlite` | Full decision log (subjects, senders, scores) | **No** (denied in `.claude/settings.json`) |
 
 Digest text from emails is sanitized and truncated, and runs of 6 or more digits
@@ -41,6 +42,12 @@ Digest text from emails is sanitized and truncated, and runs of 6 or more digits
 mail appears only as counts and sender domains, except categories marked
 `awareness: true` (e.g. security notices, cardless withdrawals), which are
 listed per platform with their distinct subjects.
+
+The phone brief is shorter: kept mail only, with sender name and subject for
+needs-attention items, and subject plus Gmail's preview (up to 160 characters)
+for categories marked `brief: true`, so you can see what a school message asks
+you to do. `scripts/morning.sh` can send it to your own iMessage (see the root
+README). There is no body extraction: the preview is Gmail's snippet.
 
 ## Setup
 

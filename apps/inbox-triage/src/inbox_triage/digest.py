@@ -85,7 +85,7 @@ def render_digest(
     ]
 
     lines += ["", "## Needs your attention", ""]
-    lines += _message_lines(sorted(attention, key=_attention_sort_key)) or ["- None"]
+    lines += _message_lines(sorted(attention, key=attention_sort_key)) or ["- None"]
     awareness = [
         d
         for d in decisions
@@ -141,7 +141,7 @@ def _awareness_lines(decisions: list[Decision], applied: bool) -> list[str]:
     return lines
 
 
-def _attention_sort_key(decision: Decision) -> tuple[int, str]:
+def attention_sort_key(decision: Decision) -> tuple[int, str]:
     return (0 if decision.category == "github_security" else 1, decision.category)
 
 

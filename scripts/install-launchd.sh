@@ -5,6 +5,10 @@
 #   scripts/install-launchd.sh 2026-10-11 6 30     # at 06:30
 #   scripts/install-launchd.sh --uninstall
 #
+# Set MORNING_IMESSAGE_TO (your own phone number or Apple ID email) when you
+# install to get the phone brief by iMessage; reinstalling without it removes it:
+#   MORNING_IMESSAGE_TO=+15555550123 scripts/install-launchd.sh 2026-10-11
+#
 # If the Mac is asleep at that time, launchd runs the job once on wake.
 
 set -euo pipefail
@@ -25,6 +29,12 @@ FIRST_APPLY="${1:?usage: install-launchd.sh YYYY-MM-DD [hour] [minute] | --unins
 HOUR="${2:-7}"
 MINUTE="${3:-0}"
 date -j -f %Y-%m-%d "$FIRST_APPLY" +%s >/dev/null || { echo "Bad date: $FIRST_APPLY"; exit 1; }
+IMESSAGE_TO="${MORNING_IMESSAGE_TO:-}"
+case "$IMESSAGE_TO" in
+  *[\<\>\&]*) echo "Bad MORNING_IMESSAGE_TO: $IMESSAGE_TO"; exit 1 ;;
+esac
+IMESSAGE_ENV=""
+[ -n "$IMESSAGE_TO" ] && IMESSAGE_ENV="<key>MORNING_IMESSAGE_TO</key><string>$IMESSAGE_TO</string>"
 
 mkdir -p "$(dirname "$PLIST")" "$REPO/data/logs"
 cat >"$PLIST" <<EOF
@@ -41,6 +51,7 @@ cat >"$PLIST" <<EOF
   <key>EnvironmentVariables</key>
   <dict>
     <key>TRIAGE_FIRST_APPLY</key><string>$FIRST_APPLY</string>
+    $IMESSAGE_ENV
   </dict>
   <key>StartCalendarInterval</key>
   <dict>
@@ -58,4 +69,5 @@ plutil -lint "$PLIST" >/dev/null
 launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
 launchctl bootstrap "$DOMAIN" "$PLIST"
 printf 'Installed %s: daily at %02d:%02d\n' "$LABEL" "$HOUR" "$MINUTE"
+if [ -n "$IMESSAGE_TO" ]; then echo "Phone brief by iMessage to $IMESSAGE_TO"; fi
 echo "Run now:  launchctl kickstart $DOMAIN/$LABEL"

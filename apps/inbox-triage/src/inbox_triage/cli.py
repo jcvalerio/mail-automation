@@ -11,6 +11,7 @@ import yaml
 from gmail_core import GmailClient
 
 from inbox_triage.audit import run_audit
+from inbox_triage.brief import write_brief
 from inbox_triage.classifier import Classifier, ClassifierError, SystemOneClassifier
 from inbox_triage.config import TriageConfig, build_query
 from inbox_triage.digest import write_digest
@@ -179,6 +180,10 @@ def main(argv: list[str] | None = None) -> int:
         if category.awareness
     )
     digest_path = write_digest(report, args.digest_dir, awareness_categories)
+    brief_categories = tuple(
+        name for name, category in config.policy.categories.items() if category.brief
+    )
+    brief_path = write_brief(report, args.digest_dir, brief_categories)
 
     # Counts only on stdout: message content stays in the digest and local log.
     actions = Counter(d.action.value for d in report.decisions)
@@ -199,4 +204,5 @@ def main(argv: list[str] | None = None) -> int:
     if report.errors:
         print(f"Gmail errors: {len(report.errors)}", file=sys.stderr)
     print(f"Digest: {digest_path}")
+    print(f"Brief: {brief_path}")
     return 1 if report.errors else 0

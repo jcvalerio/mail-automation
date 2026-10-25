@@ -5,6 +5,7 @@
 #                                 (before you empty Trash, so nothing is "gone")
 #   2. inbox-triage --apply       triage the inbox, write digests/YYYY-MM-DD.md
 #   3. inbox-triage report        on the review cadence (weekly, monthly, quarterly)
+#   4. phone brief                send digests/brief-*.txt to your own iMessage
 #
 # gmail-moneywiz-export is not part of it: it asks interactively to resolve
 # categories, so run it by hand. Bank emails stay in the inbox until then
@@ -12,10 +13,14 @@
 #
 # Everything runs locally. Von is started on loopback if it isn't already
 # running, and stopped again afterwards. Output goes to data/logs/ (private).
+# The only thing that leaves the Mac besides Gmail calls is the phone brief,
+# sent end-to-end encrypted through Messages to MORNING_IMESSAGE_TO.
 #
 # Env:
 #   TRIAGE_FIRST_APPLY   YYYY-MM-DD of the first --apply; drives the report cadence
 #   MORNING_DRY_RUN=1    run triage without --apply
+#   MORNING_IMESSAGE_TO  your own iMessage phone number or Apple ID email;
+#                        unset means no brief is sent
 
 set -u
 
@@ -109,6 +114,36 @@ if [ -n "$von_pid" ]; then
   wait "$von_pid" 2>/dev/null
 fi
 
+send_imessage() {
+  osascript - "$1" "$2" <<'APPLESCRIPT'
+on run argv
+  tell application "Messages"
+    set targetService to 1st account whose service type = iMessage
+    send (item 2 of argv) to participant (item 1 of argv) of targetService
+  end tell
+end run
+APPLESCRIPT
+}
+
+# Phone brief: what needs you, or why the run failed. Never fails the run.
+brief_status=""
+if [ -n "${MORNING_IMESSAGE_TO:-}" ]; then
+  brief_path="$(printf '%s\n' "$triage_out" | sed -n 's/^Brief: //p' | head -1)"
+  brief=""
+  [ -n "$brief_path" ] && [ -f "$brief_path" ] && brief="$(cat "$brief_path")"
+  if [ ${#failures[@]} -gt 0 ]; then
+    alert="⚠️ Mail triage failed: ${failures[*]}. See data/logs on the Mac; if the Gmail sign-in expired, run uv run inbox-triage once by hand."
+    brief="${alert}${brief:+$'\n\n'$brief}"
+  fi
+  [ -n "$brief" ] || brief="Mail triage ran, but no brief was written. See data/logs on the Mac."
+  if send_imessage "$MORNING_IMESSAGE_TO" "$brief"; then
+    log "brief sent by iMessage"
+  else
+    log "brief NOT sent: Messages/osascript failed"
+    brief_status=" iMessage brief failed."
+  fi
+fi
+
 # Counts only: the notification never shows senders or subjects.
 summary="$(printf '%s\n' "$triage_out" | grep -E '^Actions:' | head -1)"
 if [ ${#failures[@]} -gt 0 ]; then
@@ -116,6 +151,7 @@ if [ ${#failures[@]} -gt 0 ]; then
 else
   message="${summary:-Done}. Run /digest in Claude Code."
 fi
+message="${message}${brief_status}"
 osascript -e "display notification \"${message//\"/}\" with title \"Mail triage\"" || true
 
 log "morning run end (failures: ${#failures[@]})"

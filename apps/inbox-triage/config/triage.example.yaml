@@ -38,6 +38,9 @@ classifier:
 #                        can never land here; the next-best category is used.
 #   awareness: true   -> listed per platform in the digest's "For awareness"
 #                        section when archived/trashed.
+#   brief: true       -> kept messages are listed with Gmail's preview text in
+#                        the phone brief (digests/brief-YYYY-MM-DD.txt), which
+#                        scripts/morning.sh can send to your own iMessage.
 #   rule_only: true   -> only rules assign it; never a classifier choice. Use it
 #                        for vague buckets like "fyi" so the model can't collapse
 #                        onto them.
@@ -108,6 +111,7 @@ categories:
     action: keep
     priority: normal
     rule_only: true
+    brief: true
     labels: [Triage/School]
 
 # Rules run before the classifier; first match wins. Within `match`, every key
