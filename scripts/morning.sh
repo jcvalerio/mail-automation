@@ -114,15 +114,34 @@ if [ -n "$von_pid" ]; then
   wait "$von_pid" 2>/dev/null
 fi
 
-send_imessage() {
+imessage_once() {
   osascript - "$1" "$2" <<'APPLESCRIPT'
 on run argv
-  tell application "Messages"
-    set targetService to 1st account whose service type = iMessage
-    send (item 2 of argv) to participant (item 1 of argv) of targetService
-  end tell
+  with timeout of 60 seconds
+    tell application "Messages"
+      set targetService to 1st account whose service type = iMessage
+      send (item 2 of argv) to participant (item 1 of argv) of targetService
+    end tell
+  end timeout
 end run
 APPLESCRIPT
+}
+
+# Messages may be closed or still starting after wake (AppleEvent timeout -1712),
+# so open it in the background, give it time to sign in, and retry once.
+send_imessage() {
+  if ! pgrep -xq Messages; then
+    open -g -a Messages
+    for _ in $(seq 1 30); do
+      pgrep -xq Messages && break
+      sleep 1
+    done
+    sleep 10
+  fi
+  imessage_once "$1" "$2" && return 0
+  log "iMessage send failed; retrying in 30s"
+  sleep 30
+  imessage_once "$1" "$2"
 }
 
 # Phone brief: what needs you, or why the run failed. Never fails the run.
