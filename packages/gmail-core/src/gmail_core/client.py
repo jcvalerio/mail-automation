@@ -18,6 +18,10 @@ DEFAULT_METADATA_HEADERS = (
     "List-Id",
     "List-Unsubscribe",
 )
+# Retries (with backoff) on socket timeouts, connection errors, 429 and 5xx.
+# Every call here is safe to repeat: reads, label add/remove, trash, and label
+# create (a duplicate create hits the 409 path in ensure_label).
+NUM_RETRIES = 3
 
 
 class LabelResolutionError(ValueError):
@@ -46,7 +50,7 @@ class GmailClient:
                     pageToken=page_token,
                     maxResults=min(limit or 100, 100),
                 )
-                .execute()
+                .execute(num_retries=NUM_RETRIES)
             )
             messages = result.get("messages", [])
             for message in messages:
@@ -62,7 +66,7 @@ class GmailClient:
             self._service.users()
             .messages()
             .get(userId="me", id=message_id, format="full")
-            .execute()
+            .execute(num_retries=NUM_RETRIES)
         )
         payload = result.get("payload", {})
         headers = payload.get("headers", [])
@@ -100,7 +104,7 @@ class GmailClient:
                 format="metadata",
                 metadataHeaders=list(header_names),
             )
-            .execute()
+            .execute(num_retries=NUM_RETRIES)
         )
         headers: dict[str, str] = {}
         for header in result.get("payload", {}).get("headers", []):
@@ -122,7 +126,7 @@ class GmailClient:
                 self._service.users()
                 .messages()
                 .get(userId="me", id=message_id, format="minimal")
-                .execute()
+                .execute(num_retries=NUM_RETRIES)
             )
         except HttpError as error:
             if getattr(error.resp, "status", None) == 404:
@@ -147,12 +151,14 @@ class GmailClient:
                     "removeLabelIds": remove_label_ids or [],
                 },
             )
-            .execute()
+            .execute(num_retries=NUM_RETRIES)
         )
 
     def trash_message(self, message_id: str) -> None:
         """Move to Trash (recoverable for 30 days). Permanent delete is not exposed."""
-        self._service.users().messages().trash(userId="me", id=message_id).execute()
+        self._service.users().messages().trash(userId="me", id=message_id).execute(
+            num_retries=NUM_RETRIES
+        )
 
     def ensure_label(self, label_name: str) -> str:
         label_id = self._find_label_id(label_name)
@@ -170,7 +176,7 @@ class GmailClient:
                         "messageListVisibility": "show",
                     },
                 )
-                .execute()
+                .execute(num_retries=NUM_RETRIES)
             )
             self._label_cache = None
             return created["id"]
@@ -200,7 +206,12 @@ class GmailClient:
     def list_labels(self) -> dict[str, str]:
         if self._label_cache is not None:
             return self._label_cache
-        result = self._service.users().labels().list(userId="me").execute()
+        result = (
+            self._service.users()
+            .labels()
+            .list(userId="me")
+            .execute(num_retries=NUM_RETRIES)
+        )
         self._label_cache = {
             label["name"]: label["id"] for label in result.get("labels", [])
         }
@@ -233,7 +244,7 @@ class GmailClient:
                     "removeLabelIds": ["INBOX"],
                 },
             )
-            .execute()
+            .execute(num_retries=NUM_RETRIES)
         )
 
     def _load_credentials(self) -> Credentials:
